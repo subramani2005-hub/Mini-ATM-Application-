@@ -1,0 +1,326 @@
+import java.util.*;
+
+public class Main {
+    static Scanner sc = new Scanner(System.in);
+
+    // userID -> [PIN, balance]
+    static HashMap<String, String[]> users = new HashMap<>();
+
+    // userID -> List of transaction logs
+    static HashMap<String, List<String>> transactions = new HashMap<>();
+
+    // userID -> feedback rating (1 to 5)
+    static HashMap<String, Integer> feedbacks = new HashMap<>();
+
+    static String adminID = "admin";
+    static String adminPIN = "0000";
+
+    public static void main(String[] args) {
+        // Adding sample users
+        users.put("user1", new String[]{"1111", "5000"});
+        users.put("user2", new String[]{"2222", "3000"});
+        transactions.put("user1", new ArrayList<>());
+        transactions.put("user2", new ArrayList<>());
+
+        while (true) {
+            System.out.println("\n*** Welcome to NextGen ATM Console ***");
+            System.out.println("1. User Login");
+            System.out.println("2. Admin Login");
+            System.out.println("3. Exit");
+            System.out.print("Enter your choice: ");
+            String choice = sc.nextLine();
+
+            switch (choice) {
+                case "1":
+                    userLogin();
+                    break;
+                case "2":
+                    adminLogin();
+                    break;
+                case "3":
+                    System.out.println("Thank you for using the ATM. Goodbye!");
+                    break; // program continues looping
+                default:
+                    System.out.println("Invalid option. Try again.");
+            }
+        }
+    }
+
+    static void userLogin() {
+        System.out.print("Enter User ID: ");
+        String uid = sc.nextLine();
+        System.out.print("Enter PIN: ");
+        String pin = sc.nextLine();
+
+        if (users.containsKey(uid) && users.get(uid)[0].equals(pin)) {
+            transactions.putIfAbsent(uid, new ArrayList<>());
+            userMenu(uid);
+            collectFeedback(uid);
+        } else {
+            System.out.println("Invalid credentials.");
+        }
+    }
+
+    static void userMenu(String uid) {
+        while (true) {
+            System.out.println("\n--- User Menu: " + uid + " ---");
+            System.out.println("1. Check Balance");
+            System.out.println("2. Deposit");
+            System.out.println("3. Withdraw");
+            System.out.println("4. Transfer Money");
+            System.out.println("5. Transaction History");
+            System.out.println("6. Change PIN");
+            System.out.println("7. Logout");
+            System.out.print("Enter your choice: ");
+            String choice = sc.nextLine();
+
+            switch (choice) {
+                case "1":
+                    double balance = Double.parseDouble(users.get(uid)[1]);
+                    System.out.printf("Balance: %.2f\n", balance);
+                    break;
+                case "2":
+                    System.out.print("Enter amount to deposit: ");
+                    try {
+                        double deposit = Double.parseDouble(sc.nextLine());
+                        if (deposit <= 0) {
+                            System.out.println("Invalid amount.");
+                            break;
+                        }
+                        double newBalance = Double.parseDouble(users.get(uid)[1]) + deposit;
+                        users.get(uid)[1] = String.valueOf(newBalance);
+                        transactions.get(uid).add("Deposited " + deposit);
+                        System.out.println("Deposited " + deposit);
+                    } catch (NumberFormatException e) {
+                        System.out.println("Invalid input for amount.");
+                    }
+                    break;
+                case "3":
+                    System.out.print("Enter amount to withdraw: ");
+                    try {
+                        double withdraw = Double.parseDouble(sc.nextLine());
+                        double currentBalance = Double.parseDouble(users.get(uid)[1]);
+                        if (withdraw <= 0) {
+                            System.out.println("Invalid amount.");
+                            break;
+                        }
+                        if (withdraw <= currentBalance) {
+                            users.get(uid)[1] = String.valueOf(currentBalance - withdraw);
+                            transactions.get(uid).add("Withdrawn " + withdraw);
+                            System.out.println("Withdrawn " + withdraw);
+                        } else {
+                            System.out.println("Insufficient balance.");
+                        }
+                    } catch (NumberFormatException e) {
+                        System.out.println("Invalid input for amount.");
+                    }
+                    break;
+                case "4":
+                    System.out.print("Enter recipient User ID: ");
+                    String recipient = sc.nextLine();
+                    if (!users.containsKey(recipient)) {
+                        System.out.println("Recipient user does not exist.");
+                        break;
+                    }
+                    if (recipient.equals(uid)) {
+                        System.out.println("Cannot transfer to yourself.");
+                        break;
+                    }
+                    System.out.print("Enter amount to transfer: ");
+                    try {
+                        double amount = Double.parseDouble(sc.nextLine());
+                        double balanceFrom = Double.parseDouble(users.get(uid)[1]);
+                        if (amount <= 0) {
+                            System.out.println("Invalid amount.");
+                            break;
+                        }
+                        if (amount <= balanceFrom) {
+                            users.get(uid)[1] = String.valueOf(balanceFrom - amount);
+                            double recBalance = Double.parseDouble(users.get(recipient)[1]) + amount;
+                            users.get(recipient)[1] = String.valueOf(recBalance);
+                            transactions.get(uid).add("Transferred " + amount + " to " + recipient);
+                            transactions.get(recipient).add("Received " + amount + " from " + uid);
+                            System.out.println("Transferred " + amount + " to " + recipient);
+                        } else {
+                            System.out.println("Insufficient balance.");
+                        }
+                    } catch (NumberFormatException e) {
+                        System.out.println("Invalid input for amount.");
+                    }
+                    break;
+                case "5":
+                    System.out.println("Transaction History:");
+                    List<String> logs = transactions.get(uid);
+                    if (logs.isEmpty()) {
+                        System.out.println("No transactions yet.");
+                    } else {
+                        for (String log : logs) {
+                            System.out.println(log);
+                        }
+                    }
+                    break;
+                case "6":
+                    System.out.print("Enter current PIN: ");
+                    String currentPin = sc.nextLine();
+                    if (!users.get(uid)[0].equals(currentPin)) {
+                        System.out.println("Incorrect current PIN.");
+                        break;
+                    }
+                    System.out.print("Enter new PIN: ");
+                    String newPin = sc.nextLine();
+                    users.get(uid)[0] = newPin;
+                    System.out.println("PIN changed successfully.");
+                    break;
+                case "7":
+                    System.out.println("Logged out.");
+                    return;
+                default:
+                    System.out.println("Invalid choice.");
+            }
+        }
+    }
+
+    static void adminLogin() {
+        System.out.print("Enter Admin ID: ");
+        String aid = sc.nextLine();
+        System.out.print("Enter Admin PIN: ");
+        String apin = sc.nextLine();
+
+        if (aid.equals(adminID) && apin.equals(adminPIN)) {
+            adminMenu();
+            collectFeedback(adminID);
+        } else {
+            System.out.println("Invalid admin credentials.");
+        }
+    }
+
+    static void adminMenu() {
+        while (true) {
+            System.out.println("\n--- Admin Menu ---");
+            System.out.println("1. View All Users");
+            System.out.println("2. Add New User");
+            System.out.println("3. Delete User");
+            System.out.println("4. Reset User PIN");
+            System.out.println("5. View User Feedback");
+            System.out.println("6. View User Transaction History");
+            System.out.println("7. Logout");
+            System.out.print("Enter your choice: ");
+            String choice = sc.nextLine();
+
+            switch (choice) {
+                case "1":
+                    System.out.println("All Users:");
+                    for (Map.Entry<String, String[]> entry : users.entrySet()) {
+                        System.out.printf("User ID: %s, Balance: %.2f\n", entry.getKey(), Double.parseDouble(entry.getValue()[1]));
+                    }
+                    break;
+                case "2":
+                    System.out.print("Enter new User ID: ");
+                    String newUser = sc.nextLine();
+                    if (users.containsKey(newUser)) {
+                        System.out.println("User ID already exists.");
+                        break;
+                    }
+                    System.out.print("Enter PIN for new user: ");
+                    String newUserPin = sc.nextLine();
+                    System.out.print("Enter initial balance: ");
+                    try {
+                        double initialBal = Double.parseDouble(sc.nextLine());
+                        if (initialBal < 0) {
+                            System.out.println("Invalid balance.");
+                            break;
+                        }
+                        users.put(newUser, new String[]{newUserPin, String.valueOf(initialBal)});
+                        transactions.put(newUser, new ArrayList<>());
+                        System.out.println("User added successfully.");
+                    } catch (NumberFormatException e) {
+                        System.out.println("Invalid input for balance.");
+                    }
+                    break;
+                case "3":
+                    System.out.print("Enter User ID to delete: ");
+                    String delUser = sc.nextLine();
+                    if (!users.containsKey(delUser)) {
+                        System.out.println("User not found.");
+                        break;
+                    }
+                    users.remove(delUser);
+                    transactions.remove(delUser);
+                    feedbacks.remove(delUser);
+                    System.out.println("User deleted successfully.");
+                    break;
+                case "4":
+                    System.out.print("Enter User ID to reset PIN: ");
+                    String uid = sc.nextLine();
+                    if (users.containsKey(uid)) {
+                        System.out.print("Enter new PIN: ");
+                        String newPin = sc.nextLine();
+                        users.get(uid)[0] = newPin;
+                        System.out.println("PIN reset successfully.");
+                    } else {
+                        System.out.println("User not found.");
+                    }
+                    break;
+                case "5":
+                    System.out.println("User Feedback Ratings:");
+                    if (feedbacks.isEmpty()) {
+                        System.out.println("No feedback given yet.");
+                    } else {
+                        for (Map.Entry<String, Integer> entry : feedbacks.entrySet()) {
+                            System.out.println("User: " + entry.getKey() + ", Rating: " + entry.getValue() + " star(s)");
+                        }
+                    }
+                    break;
+                case "6":
+                    System.out.print("Enter User ID to view transaction history: ");
+                    String tid = sc.nextLine();
+                    if (!users.containsKey(tid)) {
+                        System.out.println("User not found.");
+                        break;
+                    }
+                    List<String> userLogs = transactions.get(tid);
+                    System.out.println("Transaction History for " + tid + ":");
+                    if (userLogs == null || userLogs.isEmpty()) {
+                        System.out.println("No transactions yet.");
+                    } else {
+                        for (String log : userLogs) {
+                            System.out.println(log);
+                        }
+                    }
+                    break;
+                case "7":
+                    System.out.println("Admin logged out.");
+                    return;
+                default:
+                    System.out.println("Invalid option.");
+            }
+        }
+    }
+
+    static void collectFeedback(String userId) {
+        while (true) {
+            System.out.print("Would you like to give feedback? (yes/no/skip): ");
+            String input = sc.nextLine().trim().toLowerCase();
+            if (input.equals("no") || input.equals("skip")) {
+                System.out.println("Feedback skipped.");
+                break;
+            } else if (input.equals("yes")) {
+                System.out.print("Enter your rating (1 to 5 stars): ");
+                try {
+                    int rating = Integer.parseInt(sc.nextLine());
+                    if (rating < 1 || rating > 5) {
+                        System.out.println("Invalid rating. Please enter 1 to 5.");
+                    } else {
+                        feedbacks.put(userId, rating);
+                        System.out.println("Thank you for your feedback!");
+                        break;
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid input. Please enter a number from 1 to 5.");
+                }
+            } else {
+                System.out.println("Invalid input. Please type 'yes', 'no', or 'skip'.");
+            }
+        }
+    }
+}
